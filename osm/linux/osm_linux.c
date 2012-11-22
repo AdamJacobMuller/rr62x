@@ -494,17 +494,17 @@ static int scsicmd_buf_get(Scsi_Cmnd *cmd, void **pbuf)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23)
 	struct scatterlist *sg;
 	sg = scsi_sglist(cmd);
-	*pbuf = kmap_atomic(HPT_SG_PAGE(sg), HPT_KMAP_TYPE) + sg->offset;
+	*pbuf = kmap_atomic(HPT_SG_PAGE(sg)) + sg->offset;
 	buflen = sg->length;
 #else 
 
 	if (cmd->use_sg) {
 		struct scatterlist *sg = (struct scatterlist *) cmd->request_buffer;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-		*pbuf = kmap_atomic(HPT_SG_PAGE(sg), HPT_KMAP_TYPE) + sg->offset;
+		*pbuf = kmap_atomic(HPT_SG_PAGE(sg)) + sg->offset;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		if (sg->page)
-			sg->address = kmap_atomic(sg->page, HPT_KMAP_TYPE) + sg->offset;
+			sg->address = kmap_atomic(sg->page) + sg->offset;
 		*pbuf = sg->address;
 #else 
 		*pbuf = sg->address;
@@ -524,16 +524,16 @@ static inline void scsicmd_buf_put(struct scsi_cmnd *cmd, void *buf)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,23)
 	struct scatterlist *sg;
 	sg = scsi_sglist(cmd);
-	kunmap_atomic((char *)buf - sg->offset, HPT_KMAP_TYPE);
+	kunmap_atomic((char *)buf - sg->offset);
 #else 
 
 	if (cmd->use_sg) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-		kunmap_atomic((char *)buf - ((struct scatterlist *)cmd->request_buffer)->offset, HPT_KMAP_TYPE);
+		kunmap_atomic((char *)buf - ((struct scatterlist *)cmd->request_buffer)->offset);
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,4,18)
 		struct scatterlist *sg = (struct scatterlist *) cmd->request_buffer;
 		if (sg->page)
-			kunmap_atomic((char *)buf - sg->offset, HPT_KMAP_TYPE);
+			kunmap_atomic((char *)buf - sg->offset);
 #endif
 	}
 
@@ -922,7 +922,7 @@ static void hpt_scsi_start_stop_done(PCOMMAND pCmd)
 	}
 }
 
-static int hpt_queuecommand (Scsi_Cmnd * SCpnt, void (*done) (Scsi_Cmnd *))
+static int hpt_queuecommand_lck (Scsi_Cmnd * SCpnt, void (*done) (Scsi_Cmnd *))
 {
 	struct Scsi_Host *phost = sc_host(SCpnt);
 	PVBUS_EXT vbus_ext = get_vbus_ext(phost);
@@ -1455,6 +1455,12 @@ cmd_done:
 	SCpnt->scsi_done(SCpnt);
 	return 0;
 }
+
+#ifdef DEF_SCSI_QCMD
+DEF_SCSI_QCMD(hpt_queuecommand)
+#else
+#define hpt_queuecommand hpt_queuecommand_lck
+#endif
 
 static int hpt_reset (Scsi_Cmnd *SCpnt)
 {

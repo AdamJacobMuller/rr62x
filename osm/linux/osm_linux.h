@@ -7,11 +7,11 @@
 #define _OSM_LINUX_H
 
 /* system headers */
-
+/*
 #ifndef AUTOCONF_INCLUDED
 #include <linux/config.h>
 #endif
-
+*/
 #include <linux/version.h>
 
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0)) && defined(MODVERSIONS)
@@ -174,7 +174,9 @@ typedef void irqreturn_t;
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+/*
 #define HPT_KMAP_TYPE KM_BIO_SRC_IRQ
+*/
 #define HPT_FIND_PCI_DEVICE pci_get_device
 #else 
 #define HPT_KMAP_TYPE KM_BH_IRQ
